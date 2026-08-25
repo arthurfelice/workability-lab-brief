@@ -102,6 +102,18 @@
 
   .empty{font-family:var(--mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:40px 0;}
 
+  /* ---------------- SIGNALS ---------------- */
+  .sig-badge{display:inline-block;min-width:16px;height:16px;line-height:16px;padding:0 4px;margin-left:4px;border-radius:9px;background:var(--blue);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:0;text-align:center;vertical-align:middle;}
+  .sig-badge:empty{display:none;}
+  .article-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+  .pin{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:#fff;border:1px solid var(--hair);padding:8px 13px;cursor:pointer;transition:.12s;}
+  .pin:hover{border-color:var(--blue);color:var(--blue);}
+  .pin.on{border-color:var(--blue);background:var(--blue);color:#fff;}
+  #signals{display:none;padding-bottom:60px;}
+  .sig-remove{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:1px solid var(--hair);padding:8px 13px;cursor:pointer;transition:.12s;}
+  .sig-remove:hover{border-color:#D11;color:#D11;}
+  .sig-note{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--muted);margin:2px 0 0;}
+
   /* ---------------- FOOTER ---------------- */
   footer.site{margin-top:auto;background:var(--ink);color:#fff;}
   .foot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;padding-top:22px;padding-bottom:22px;}
@@ -128,6 +140,7 @@
     <nav class="center">
       <a id="nav-editions" class="active" onclick="showFeed()">Editions</a>
       <a id="nav-latest" onclick="openLatest()">Latest</a>
+      <a id="nav-signals" onclick="showSignals()">Signals <span id="sig-count" class="sig-badge"></span></a>
     </nav>
     <div class="hdr-right">EN Edition</div>
   </div>
@@ -159,6 +172,12 @@
   <div id="reader-body"></div>
 </main>
 
+<!-- ================= SIGNALS ================= -->
+<main id="signals" class="wrap">
+  <button class="back" onclick="showFeed()">&larr; All editions</button>
+  <div id="signals-body"></div>
+</main>
+
 <!-- ================= FOOTER ================= -->
 <footer class="site">
   <div class="wrap foot">
@@ -187,13 +206,33 @@
 
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   function attr(s){return String(s==null?"":s).replace(/"/g,"&quot;");}
+
+  /* ---------- SIGNALS (personal pins, stored per-browser) ---------- */
+  var SIG_KEY="wlab_signals";
+  window.__SIGMETA={};
+  function loadSignals(){try{var a=JSON.parse(localStorage.getItem(SIG_KEY)||"[]");return Array.isArray(a)?a:[];}catch(e){return [];}}
+  function saveSignals(a){try{localStorage.setItem(SIG_KEY,JSON.stringify(a));}catch(e){}}
+  function isSignal(key){return loadSignals().some(function(s){return s.key===key;});}
+  function updateSigCount(){var b=document.getElementById("sig-count");if(b)b.textContent=loadSignals().length||"";}
+  function toggleSignal(ev,key){
+    if(ev){ev.stopPropagation();}
+    var arr=loadSignals(), i=-1;
+    for(var k=0;k<arr.length;k++){if(arr[k].key===key){i=k;break;}}
+    if(i>-1){arr.splice(i,1);}
+    else{var m=window.__SIGMETA[key];if(m){var e={};for(var p in m)e[p]=m[p];e.key=key;e.savedAt=Date.now();arr.unshift(e);}}
+    saveSignals(arr);
+    updateSigCount();
+    if(ev&&ev.currentTarget){var btn=ev.currentTarget,on=i<0;btn.classList.toggle("on",on);btn.innerHTML=on?"&#10003; Signalled":"&#43; Signal";}
+    if(document.getElementById("signals").style.display==="block"){renderSignals();}
+  }
   function articleCount(ed){return (ed.sections||[]).reduce(function(n,s){return n+(s.items?s.items.length:0);},0);}
   function trunc(s,n){s=String(s||"");return s.length>n?s.slice(0,n).replace(/\s+\S*$/,"")+"…":s;}
 
   function setNav(which){
-    var e=document.getElementById("nav-editions"), l=document.getElementById("nav-latest");
+    var e=document.getElementById("nav-editions"), l=document.getElementById("nav-latest"), s=document.getElementById("nav-signals");
     e.classList.toggle("active", which==="editions");
     l.classList.toggle("active", which==="latest");
+    s.classList.toggle("active", which==="signals");
   }
 
   function renderFeed(){
@@ -235,13 +274,19 @@
       html+='<div class="sec"><div class="sec-head"><span class="tick"></span><h3>'+esc(sec.heading)+'</h3></div>';
       (sec.items||[]).forEach(function(it,idx){
         var n=(idx+1)<10?("0"+(idx+1)):(idx+1);
+        var key=it.url||(ed.id+"::"+it.headline);
+        window.__SIGMETA[key]={headline:it.headline,body:it.body,source:it.source,url:it.url,image:it.image,editionTag:ed.tag,editionDate:ed.displayDate,editionId:ed.id,section:sec.heading};
+        var on=isSignal(key);
         html+='<div class="article">'+
           '<div class="num">'+n+'</div>'+
           '<div>'+
             '<h4>'+esc(it.headline)+'</h4>'+
             (it.image?'<img class="article-img" loading="lazy" src="'+attr(it.image)+'" alt="" onerror="'+IMG_ERR+'">':'')+
             '<p>'+esc(it.body)+'</p>'+
-            (it.url?'<a class="src" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.source||"Source")+' &nearr;</a>':'')+
+            '<div class="article-actions">'+
+              (it.url?'<a class="src" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.source||"Source")+' &nearr;</a>':'')+
+              '<button class="pin'+(on?' on':'')+'" onclick="toggleSignal(event,\''+attr(key)+'\')">'+(on?'&#10003; Signalled':'&#43; Signal')+'</button>'+
+            '</div>'+
           '</div>'+
         '</div>';
       });
@@ -250,6 +295,7 @@
 
     document.getElementById("reader-body").innerHTML=html;
     document.getElementById("feed").style.display="none";
+    document.getElementById("signals").style.display="none";
     document.getElementById("reader").style.display="block";
     setNav(fromLatest?"latest":"none");
     window.scrollTo(0,0);
@@ -257,12 +303,57 @@
 
   function showFeed(){
     document.getElementById("reader").style.display="none";
+    document.getElementById("signals").style.display="none";
     document.getElementById("feed").style.display="block";
     setNav("editions");
     window.scrollTo(0,0);
   }
   function openLatest(){ if(EDITIONS.length) openEdition(EDITIONS[0].id, true); }
 
+  function renderSignals(){
+    var arr=loadSignals();
+    var html=''+
+      '<div class="r-head">'+
+        '<div class="r-kicker">Signals</div>'+
+        '<h2>Your signals</h2>'+
+        '<div class="r-date">'+arr.length+' saved &nbsp;/&nbsp; stored on this browser only</div>'+
+      '</div>';
+    if(!arr.length){
+      html+='<div class="empty">No signals yet. Open an edition and hit "＋ Signal" on any story to pin it here.</div>';
+    } else {
+      html+='<div class="sec"><div class="sec-head"><span class="tick"></span><h3>Pinned stories</h3></div>';
+      arr.forEach(function(it,idx){
+        var n=(idx+1)<10?("0"+(idx+1)):(idx+1);
+        window.__SIGMETA[it.key]={headline:it.headline,body:it.body,source:it.source,url:it.url,image:it.image,editionTag:it.editionTag,editionDate:it.editionDate,editionId:it.editionId,section:it.section};
+        html+='<div class="article">'+
+          '<div class="num">'+n+'</div>'+
+          '<div>'+
+            '<h4>'+esc(it.headline)+'</h4>'+
+            '<p class="sig-note">'+esc((it.editionTag?it.editionTag+" · ":"")+(it.editionDate||"")+(it.section?"  ·  "+it.section:""))+'</p>'+
+            (it.image?'<img class="article-img" loading="lazy" src="'+attr(it.image)+'" alt="" onerror="'+IMG_ERR+'">':'')+
+            (it.body?'<p>'+esc(it.body)+'</p>':'')+
+            '<div class="article-actions">'+
+              (it.url?'<a class="src" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.source||"Source")+' &nearr;</a>':'')+
+              '<button class="sig-remove" onclick="toggleSignal(event,\''+attr(it.key)+'\')">&#10005; Remove</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      });
+      html+='</div>';
+    }
+    document.getElementById("signals-body").innerHTML=html;
+  }
+
+  function showSignals(){
+    renderSignals();
+    document.getElementById("reader").style.display="none";
+    document.getElementById("feed").style.display="none";
+    document.getElementById("signals").style.display="block";
+    setNav("signals");
+    window.scrollTo(0,0);
+  }
+
+  updateSigCount();
   renderFeed();
 </script>
 </body>
