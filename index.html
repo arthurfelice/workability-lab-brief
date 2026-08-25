@@ -133,6 +133,9 @@
   .sig-card .meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;}
   .sig-card .body{font-size:14px;color:var(--muted);line-height:1.5;margin:0 0 16px;}
   .sig-card .foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+  .sig-dl{width:38px;height:38px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--hair);background:#fff;cursor:pointer;transition:.12s;color:var(--muted);}
+  .sig-dl:hover{border-color:var(--blue);color:var(--blue);}
+  .sig-dl svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
 
   /* ---------------- FOOTER ---------------- */
   footer.site{margin-top:auto;background:var(--ink);color:#fff;}
@@ -347,6 +350,31 @@
     return "social";
   }
 
+  function downloadSignal(ev,key){
+    if(ev){ev.stopPropagation();}
+    var arr=loadSignals(), it=null;
+    for(var i=0;i<arr.length;i++){if(arr[i].key===key){it=arr[i];break;}}
+    if(!it)return;
+    var cat=(STEEP[classifySteep(it)]||STEEP.social).label;
+    var lines=[
+      "TITLE",it.headline||"","",
+      "SUMMARY",it.body||"","",
+      "SOURCE",(it.source||"Source")+(it.url?" — "+it.url:""),"",
+      "EDITION",((it.editionTag?it.editionTag+" · ":"")+(it.editionDate||"")),"",
+      "STEEP CATEGORY",cat,"",
+      "— Saved from Workability Lab Daily Brief"
+    ];
+    var text=lines.join("\n");
+    var slug=(it.headline||"signal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,50)||"signal";
+    var blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download="signal-"+slug+".txt";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }
+
   function renderSignals(){
     var arr=loadSignals();
     var html=''+
@@ -376,6 +404,7 @@
             '<div class="foot">'+
               (it.url?'<a class="src" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.source||"Source")+' &nearr;</a>':'')+
               '<button class="sig-remove" onclick="toggleSignal(event,\''+attr(it.key)+'\')">&#10005; Remove</button>'+
+              '<button class="sig-dl" title="Download this signal" aria-label="Download this signal" onclick="downloadSignal(event,\''+attr(it.key)+'\')"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M5 20h14"/></svg></button>'+
             '</div>'+
           '</div>'+
         '</article>';
