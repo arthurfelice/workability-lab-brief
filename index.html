@@ -360,6 +360,23 @@
     if(cur)lines.push(cur);
     return lines;
   }
+  // char-level wrap (for URLs and other unbreakable strings)
+  function wrapChars(ctx,text,maxW,maxLines){
+    text=String(text||"");var lines=[],cur="";
+    for(var i=0;i<text.length;i++){
+      var test=cur+text[i];
+      if(ctx.measureText(test).width>maxW&&cur){lines.push(cur);cur=text[i];if(maxLines&&lines.length>=maxLines)break;}
+      else{cur=test;}
+    }
+    if(cur&&(!maxLines||lines.length<maxLines))lines.push(cur);
+    if(maxLines&&lines.length>=maxLines){
+      var last=lines[maxLines-1];
+      while(last.length&&ctx.measureText(last+"…").width>maxW){last=last.slice(0,-1);}
+      lines[maxLines-1]=last+"…";
+      lines=lines.slice(0,maxLines);
+    }
+    return lines;
+  }
 
   function downloadSignal(ev,key){
     if(ev){ev.stopPropagation();}
@@ -423,9 +440,9 @@
       var sLines=wrapLines(ctx,srcTxt,rightW-2*pad);
       for(var s2=0;s2<sLines.length;s2++){ctx.fillText(sLines[s2],rightX+pad,pTop+pad+46+s2*36);}
       if(it.url){ctx.font="400 18px "+MONO;ctx.fillStyle=MUT;
-        var uLines=wrapLines(ctx,it.url,rightW-2*pad);
+        var uLines=wrapChars(ctx,it.url,rightW-2*pad,3);
         var uy=pTop+pad+46+sLines.length*36+14;
-        for(var u2=0;u2<uLines.length&&u2<3;u2++){ctx.fillText(uLines[u2],rightX+pad,uy+u2*26);}
+        for(var u2=0;u2<uLines.length;u2++){ctx.fillText(uLines[u2],rightX+pad,uy+u2*26);}
       }
 
       var catY=pTop+rH+gap;
