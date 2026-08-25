@@ -132,7 +132,9 @@
   .sig-card h4{font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.22;margin:0 0 10px;}
   .sig-card .meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;}
   .sig-card .body{font-size:14px;color:var(--muted);line-height:1.5;margin:0 0 16px;}
-  .sig-card .foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+  .sig-card .foot{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:10px;}
+  .sig-card .foot .src{max-width:100%;}
+  .foot-actions{display:flex;align-items:center;gap:10px;}
   .sig-dl{width:38px;height:38px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--hair);background:#fff;cursor:pointer;transition:.12s;color:var(--muted);}
   .sig-dl:hover{border-color:var(--blue);color:var(--blue);}
   .sig-dl svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
@@ -501,8 +503,10 @@
             (it.body?'<p class="body">'+esc(trunc(it.body,150))+'</p>':'')+
             '<div class="foot">'+
               (it.url?'<a class="src" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.source||"Source")+' &nearr;</a>':'')+
-              '<button class="sig-remove" onclick="toggleSignal(event,\''+attr(it.key)+'\')">&#10005; Remove</button>'+
-              '<button class="sig-dl" title="Download as image (JPEG)" aria-label="Download this signal as image" onclick="downloadSignal(event,\''+attr(it.key)+'\')"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M5 20h14"/></svg></button>'+
+              '<div class="foot-actions">'+
+                '<button class="sig-remove" onclick="toggleSignal(event,\''+attr(it.key)+'\')">&#10005; Remove</button>'+
+                '<button class="sig-dl" title="Download as image (JPEG)" aria-label="Download this signal as image" onclick="downloadSignal(event,\''+attr(it.key)+'\')"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M5 20h14"/></svg></button>'+
+              '</div>'+
             '</div>'+
           '</div>'+
         '</article>';
