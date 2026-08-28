@@ -117,6 +117,7 @@
   .sig-sub{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
   #signals{padding-bottom:60px;}
   #signals .grid{padding-top:26px;}
+  .sig-filter{margin:16px 0 6px;}
 
   /* STEEP legend */
   .steep-legend{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0 0;}
@@ -321,18 +322,52 @@
       '</div>'+
     '</article>';
   }
+  var SIG_STATE={steep:"all", q:""};
+  function renderSigChips(){
+    var order=["all","social","technological","economic","environmental","political"];
+    var html=order.map(function(k){
+      if(k==="all"){
+        return '<div class="chip all'+(SIG_STATE.steep==="all"?" on":"")+'" onclick="setSigSteep(\'all\')"><i></i>All</div>';
+      }
+      var st=STEEP[k], on=SIG_STATE.steep===k, econ=(k==="economic")?" econ":"";
+      return '<div class="chip'+(on?" on":"")+econ+'" style="--steep:'+st.color+'" onclick="setSigSteep(\''+k+'\')"><i></i>'+esc(st.label)+'</div>';
+    }).join("");
+    var el=document.getElementById("sig-chips"); if(el){el.innerHTML=html;}
+  }
+  function setSigSteep(k){ SIG_STATE.steep=k; renderSigChips(); sigRenderGrid(); }
+  function sigMatches(it){
+    var cat=it.steep||classifySteep(it);
+    if(SIG_STATE.steep!=="all" && cat!==SIG_STATE.steep) return false;
+    if(SIG_STATE.q){
+      var hay=((it.headline||"")+" "+(it.body||"")+" "+(it.source||"")+" "+(it.section||"")).toLowerCase();
+      if(hay.indexOf(SIG_STATE.q)===-1) return false;
+    }
+    return true;
+  }
+  function sigRenderGrid(){
+    var arr=loadSignals();
+    var qi=document.getElementById("sig-search");
+    if(qi){SIG_STATE.q=(qi.value||"").toLowerCase().trim();}
+    var body=document.getElementById("sig-body"); if(!body)return;
+    if(!arr.length){body.innerHTML='<div class="empty">No signals yet. Hit &#43; Signal on any story to pin it here.</div>';return;}
+    var filtered=arr.filter(sigMatches);
+    body.innerHTML = filtered.length ? '<div class="grid">'+filtered.map(sigCard).join("")+'</div>' : '<div class="empty">No signals match this filter.</div>';
+  }
   function sigRender(){
     var arr=loadSignals();
     arr.forEach(function(it){window.__SIGMETA[it.key]={headline:it.headline,body:it.body,source:it.source,url:it.url,image:it.image,editionTag:it.editionTag,editionDate:it.editionDate,editionId:it.editionId,section:it.section,steep:it.steep};});
     var html='<button class="back" onclick="showEditions()">&larr; Back to feed</button>'+
       '<div class="sig-head"><h2 class="sig-title">Your signals</h2>'+
-      '<div class="sig-sub">'+arr.length+' saved &nbsp;/&nbsp; stored on this browser only</div>'+
-      '<div class="steep-legend">'+
-        Object.keys(STEEP).map(function(k){return '<span><i style="background:'+STEEP[k].color+'"></i>'+esc(STEEP[k].label)+'</span>';}).join("")+
-      '</div></div>';
-    if(!arr.length){html+='<div class="empty">No signals yet. Hit &#43; Signal on any story to pin it here.</div>';}
-    else{html+='<div class="grid">'+arr.map(sigCard).join("")+'</div>';}
+      '<div class="sig-sub">'+arr.length+' saved &nbsp;/&nbsp; stored on this browser only</div></div>'+
+      '<div class="sig-filter">'+
+        '<input id="sig-search" class="search" type="text" placeholder="Search your signals..." oninput="sigRenderGrid()" />'+
+        '<div id="sig-chips" class="chips"></div>'+
+      '</div>'+
+      '<div id="sig-body"></div>';
     document.getElementById("signals").innerHTML=html;
+    var qi=document.getElementById("sig-search"); if(qi){qi.value=SIG_STATE.q;}
+    renderSigChips();
+    sigRenderGrid();
   }
   function showEditions(){
     document.getElementById("ed-hero").style.display="";
